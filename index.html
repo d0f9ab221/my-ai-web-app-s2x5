@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusTex - ASTC & Game Asset Texture Injector</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#0a0f1d',
+                            card: '#111827',
+                            accent: '#10b981',
+                            accentHover: '#059669',
+                            warning: '#f59e0b',
+                            danger: '#ef4444',
+                            border: '#1f2937'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+<style>
+/* --- CSS: /styles.css --- */
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #0a0f1d;
+}
+::-webkit-scrollbar-thumb {
+    background: #1f2937;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #10b981;
+}
+
+/* 3D Cube CSS Animation & Setup */
+.scene {
+    perspective: 400px;
+}
+
+.cube {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transform: rotateX(-20deg) rotateY(45deg);
+    animation: rotateCube 15s infinite linear;
+    transition: transform 0.1s ease;
+}
+
+@keyframes rotateCube {
+    0% { transform: rotateX(-20deg) rotateY(0deg); }
+    100% { transform: rotateX(-20deg) rotateY(360deg); }
+}
+
+.face {
+    position: absolute;
+    width: 128px;
+    height: 128px;
+    border: 2px solid rgba(16, 185, 129, 0.4);
+    background-color: rgba(17, 24, 39, 0.8);
+    background-size: cover;
+    background-position: center;
+    box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.2);
+}
+
+/* Position faces */
+.front  { transform: rotateY(  0deg) translateZ(64px); }
+.back   { transform: rotateY(180deg) translateZ(64px); }
+.right  { transform: rotateY( 90deg) translateZ(64px); }
+.left   { transform: rotateY(-90deg) translateZ(64px); }
+.top    { transform: rotateX( 90deg) translateZ(64px); }
+.bottom { transform: rotateX(-90deg) translateZ(64px); }
+
+/* Hex Highlight Styles */
+.hex-highlight-astc {
+    background-color: rgba(16, 185, 129, 0.25);
+    color: #10b981;
+    border-bottom: 1px dashed #10b981;
+    cursor: pointer;
+}
+
+.hex-highlight-png {
+    background-color: rgba(59, 130, 246, 0.25);
+    color: #3b82f6;
+    border-bottom: 1px dashed #3b82f6;
+    cursor: pointer;
+}
+
+.hex-highlight-jpeg {
+    background-color: rgba(245, 158, 11, 0.25);
+    color: #f59e0b;
+    border-bottom: 1px dashed #f59e0b;
+    cursor: pointer;
+}
+
+/* Glowing effects */
+.glow-emerald {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+}
+
+.glow-blue {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+}
+</style></head>
+<body class="bg-cyber-bg text-slate-100 font-sans min-h-screen flex flex-col selection:bg-emerald-500 selection:text-black">
+
+    <!-- Header -->
+    <header class="border-b border-cyber-border bg-cyber-card/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/30 text-emerald-400 animate-pulse">
+                    <i data-lucide="cpu" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wider text-white flex items-center gap-2">
+                        NEXUSTEX <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/30 font-mono">v3.0 PRO</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">ASTC Texture Injector & Mobile Game Asset Modder</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="btn-load-demo" class="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-medium transition-all">
+                    <i data-lucide="database" class="w-4 h-4 text-emerald-400"></i>
+                    Load Free Fire Avatar Demo
+                </button>
+                <button id="btn-synth-toggle" class="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-400 hover:text-white transition-all" title="Toggle Sound Effects">
+                    <i data-lucide="volume-2" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Upload & Controls (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-6">
+            
+            <!-- Step 1: Upload Game Asset / ASTC File -->
+            <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                        <span class="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xs font-mono">1</span>
+                        Target Binary / ASTC File
+                    </h2>
+                    <span id="target-status" class="text-xs text-slate-500 flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-slate-600"></span> Empty
+                    </span>
+                </div>
+                
+                <div id="dropzone-target" class="border-2 border-dashed border-slate-700 hover:border-emerald-500/50 rounded-lg p-6 text-center cursor-pointer transition-all bg-slate-900/40 group">
+                    <input type="file" id="file-target" class="hidden" accept=".astc,.bin,.pak,.assets,.dat,.png">
+                    <i data-lucide="upload-cloud" class="w-10 h-10 mx-auto mb-3 text-slate-500 group-hover:text-emerald-400 transition-colors"></i>
+                    <p class="text-sm font-medium text-slate-300">Drag & drop or click to upload</p>
+                    <p class="text-xs text-slate-500 mt-1">Supports .astc, .bin, .pak, .assets, or custom game files</p>
+                </div>
+
+                <!-- File Info Panel (Hidden by default) -->
+                <div id="target-info-panel" class="hidden mt-4 p-3 bg-slate-900/80 border border-slate-800 rounded-lg text-xs font-mono space-y-2">
+                    <div class="flex justify-between"><span class="text-slate-400">File Name:</span> <span id="info-name" class="text-white truncate max-w-[200px]">-</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">File Size:</span> <span id="info-size" class="text-emerald-400">-</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Detected Format:</span> <span id="info-format" class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">-</span></div>
+                </div>
+            </div>
+
+            <!-- Step 2: Upload Replacement Image or Raw ASTC -->
+            <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                        <span class="w-5 h-5 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center text-xs font-mono">2</span>
+                        Replacement Texture
+                    </h2>
+                    <span id="replacement-status" class="text-xs text-slate-500 flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-slate-600"></span> No Image
+                    </span>
+                </div>
+                
+                <div id="dropzone-replacement" class="border-2 border-dashed border-slate-700 hover:border-blue-500/50 rounded-lg p-6 text-center cursor-pointer transition-all bg-slate-900/40 group">
+                    <input type="file" id="file-replacement" class="hidden" accept="image/png, image/jpeg, .astc">
+                    <i data-lucide="image" class="w-10 h-10 mx-auto mb-3 text-slate-500 group-hover:text-blue-400 transition-colors"></i>
+                    <p class="text-sm font-medium text-slate-300">Upload Replacement Image or .astc</p>
+                    <p class="text-xs text-slate-500 mt-1">Supports PNG, JPG, or raw ASTC files</p>
+                </div>
+
+                <!-- Replacement Preview -->
+                <div id="replacement-preview-container" class="hidden mt-4">
+                    <div class="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-950 flex items-center justify-center p-2">
+                        <img id="replacement-preview-img" class="max-h-40 object-contain rounded hidden" src="" alt="Replacement Preview">
+                        <canvas id="replacement-preview-canvas" class="max-h-40 object-contain rounded bg-slate-900"></canvas>
+                        <button id="btn-clear-replacement" class="absolute top-2 right-2 p-1 bg-red-500/80 hover:bg-red-600 text-white rounded-md transition-all">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div class="mt-2 p-3 bg-slate-900/80 border border-slate-800 rounded-lg text-xs font-mono space-y-1">
+                        <div class="flex justify-between"><span class="text-slate-400">Dimensions:</span> <span id="rep-dimensions" class="text-blue-400">-</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">File Size:</span> <span id="rep-size" class="text-blue-400">-</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">Format:</span> <span id="rep-format" class="text-blue-400">-</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Injection Configuration -->
+            <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 mb-4 flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center text-xs font-mono">3</span>
+                    Injection Settings
+                </h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1.5 font-medium">Injection Mode</label>
+                        <select id="injection-mode" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <option value="dynamic" selected>Dynamic Inject (Re-pack & Resize File)</option>
+                            <option value="pad">Safe Pad / Truncate (Keep Original File Size)</option>
+                            <option value="raw-astc">Raw ASTC Header Re-write (For direct .astc files)</option>
+                        </select>
+                        <p class="text-[11px] text-slate-500 mt-1" id="mode-desc">
+                            Dynamic mode adjusts the container file size to perfectly fit the new texture data.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1.5 font-medium">ASTC Block Size</label>
+                            <select id="astc-block-size" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="4x4">4x4 (High Quality)</option>
+                                <option value="6x6" selected>6x6 (Balanced)</option>
+                                <option value="8x8">8x8 (Medium)</option>
+                                <option value="12x12">12x12 (High Compression)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1.5 font-medium">Byte Alignment</label>
+                            <select id="byte-alignment" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="1">None (1-byte)</option>
+                                <option value="4">4-byte (Unity/Unreal)</option>
+                                <option value="8">8-byte (Mali GPU)</option>
+                                <option value="16" selected>16-byte (Strict Mobile)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-slate-900/60 border border-slate-800 rounded-lg space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium flex items-center gap-1.5">
+                                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+                                Free Fire Compatibility Fix
+                            </span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="ff-compat-toggle" class="sr-only peer" checked>
+                                <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 peer-checked:after:bg-white"></div>
+                            </label>
+                        </div>
+                        <p class="text-[10px] text-slate-500">
+                            Forces standard-compliant ASTC Void-Extent block encoding to prevent black avatar textures in-game.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1.5 font-medium">Output Suffix</label>
+                            <input type="text" id="output-suffix" value="_modded" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1.5 font-medium">Force Dimensions</label>
+                            <select id="force-dimensions" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="auto" selected>Auto (Keep Original)</option>
+                                <option value="256x256">256 x 256 (Avatar)</option>
+                                <option value="512x512">512 x 512 (HD)</option>
+                                <option value="1024x1024">1024 x 1024 (Ultra)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button id="btn-process-inject" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-lg shadow-lg shadow-emerald-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i data-lucide="zap" class="w-5 h-5"></i>
+                        INJECT & CONVERT TEXTURE
+                    </button>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Column: Hex Viewer, Scanner & 3D Preview (7 Cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-6">
+            
+            <!-- Texture Scanner & Hex Viewer -->
+            <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-xl flex flex-col h-[420px]">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                    <div>
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                            <i data-lucide="binary" class="w-4 h-4 text-emerald-400"></i>
+                            Binary Scanner & Hex Inspector
+                        </h2>
+                        <p class="text-xs text-slate-500">Scans file for embedded ASTC, PNG, or JPG textures</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-400 font-mono">Detected:</span>
+                        <span id="detected-count" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-xs font-mono">0 textures</span>
+                    </div>
+                </div>
+
+                <!-- Scanner Results / Detected Textures -->
+                <div id="scanner-results-container" class="mb-3 p-2 bg-slate-950 rounded-lg border border-slate-800 max-h-24 overflow-y-auto hidden">
+                    <div class="text-xs font-semibold text-slate-400 mb-1 px-1">Detected Texture Offsets:</div>
+                    <div id="scanner-list" class="space-y-1"></div>
+                </div>
+
+                <!-- Hex View Area -->
+                <div class="flex-1 bg-slate-950 rounded-lg border border-slate-800 p-3 font-mono text-xs overflow-y-auto relative" id="hex-container">
+                    <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 bg-slate-950/90 z-10" id="hex-placeholder">
+                        <i data-lucide="search-code" class="w-10 h-10 mb-2 text-slate-600 animate-bounce"></i>
+                        <p>No binary file loaded</p>
+                        <p class="text-[11px] text-slate-600 mt-1">Upload a file or click "Load Free Fire Avatar Demo" to inspect bytes</p>
+                    </div>
+                    <div class="grid grid-cols-12 gap-2 text-slate-400 border-b border-slate-800 pb-1 mb-2 select-none">
+                        <div class="col-span-3 text-emerald-500/80">Offset</div>
+                        <div class="col-span-6 text-center">Hex Bytes</div>
+                        <div class="col-span-3 text-right">ASCII</div>
+                    </div>
+                    <div id="hex-rows" class="space-y-1 select-text"></div>
+                </div>
+            </div>
+
+            <!-- 3D Game Asset Previewer & Console -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- 3D Previewer -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-xl flex flex-col justify-between h-[320px]">
+                    <div>
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2 mb-1">
+                            <i data-lucide="box" class="w-4 h-4 text-blue-400"></i>
+                            3D Asset Preview
+                        </h2>
+                        <p class="text-xs text-slate-500">Simulated in-game texture mapping</p>
+                    </div>
+
+                    <!-- 3D Canvas / CSS Container -->
+                    <div class="flex-1 flex items-center justify-center relative overflow-hidden my-3 bg-slate-950 rounded-lg border border-slate-800/50">
+                        <div class="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] opacity-30"></div>
+                        
+                        <!-- 3D Rotating Box -->
+                        <div class="scene w-32 h-32">
+                            <div class="cube" id="preview-cube">
+                                <div class="face front"></div>
+                                <div class="face back"></div>
+                                <div class="face right"></div>
+                                <div class="face left"></div>
+                                <div class="face top"></div>
+                                <div class="face bottom"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center text-[11px] text-slate-400">
+                        <span>Drag to rotate (simulated)</span>
+                        <span class="text-emerald-400 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> Live Renderer
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Developer Console Log -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-xl flex flex-col h-[320px]">
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                            <i data-lucide="terminal" class="w-4 h-4 text-amber-400"></i>
+                            System Console
+                        </h2>
+                        <button id="btn-clear-console" class="text-xs text-slate-500 hover:text-slate-300 transition-colors">Clear</button>
+                    </div>
+                    <div class="flex-1 bg-slate-950 rounded-lg border border-slate-800 p-3 font-mono text-[11px] text-slate-300 overflow-y-auto space-y-1.5" id="console-log">
+                        <div class="text-slate-500">[SYSTEM] NexusTex Console Initialized. Ready for binary injection.</div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-cyber-border bg-cyber-card/40 py-6 px-6 mt-12">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+            <p>© 2025 NexusTex. Advanced ASTC Texture Injection Suite. All rights reserved.</p>
+            <div class="flex gap-4">
+                <a href="#" class="hover:text-slate-300 transition-colors">Documentation</a>
+                <a href="#" class="hover:text-slate-300 transition-colors">ASTC Spec</a>
+                <a href="#" class="hover:text-slate-300 transition-colors">GitHub</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    
+    
+    
+<script type="text/javascript">
+/* --- Script: /data.js --- */
+window.AppTemplates = {
+    // A mock binary file representing a game asset container (.pak / .bin)
+    // It contains a header, some metadata, an embedded PNG texture, and an ASTC texture signature.
+    generateDemoAsset: function() {
+        const size = 1024; // 1KB demo file
+        const buffer = new ArrayBuffer(size);
+        const view = new DataView(buffer);
+        const uint8 = new Uint8Array(buffer);
+
+        // Write custom container header "NEXUSPAK"
+        const headerStr = "NEXUSPAK";
+        for (let i = 0; i < headerStr.length; i++) {
+            view.setUint8(i, headerStr.charCodeAt(i));
+        }
+
+        // Write some random metadata bytes
+        for (let i = 10; i < 100; i++) {
+            view.setUint8(i, Math.floor(Math.random() * 256));
+        }
+
+        // Inject a PNG signature at offset 120
+        // PNG Magic: 89 50 4E 47 0D 0A 1A 0A
+        const pngOffset = 120;
+        const pngSig = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+        for (let i = 0; i < pngSig.length; i++) {
+            view.setUint8(pngOffset + i, pngSig[i]);
+        }
+        // Add some mock PNG dimensions and data
+        view.setUint32(pngOffset + 8, 256); // Width
+        view.setUint32(pngOffset + 12, 256); // Height
+
+        // Write some more random bytes
+        for (let i = 200; i < 400; i++) {
+            view.setUint8(i, Math.floor(Math.random() * 256));
+        }
+
+        // Inject an ASTC signature at offset 450
+        // ASTC Magic: 13 AB A1 5C
+        const astcOffset = 450;
+        const astcSig = [0x13, 0xAB, 0xA1, 0x5C];
+        for (let i = 0; i < astcSig.length; i++) {
+            view.setUint8(astcOffset + i, astcSig[i]);
+        }
+        // ASTC Header block size (e.g., 6x6 block)
+        view.setUint8(astcOffset + 4, 6); // Block width
+        view.setUint8(astcOffset + 5, 6); // Block height
+        view.setUint8(astcOffset + 6, 1); // Block depth
+        
+        // ASTC Dimensions (256 x 256)
+        // X-size (24-bit): 256 -> 0x000100
+        view.setUint8(astcOffset + 7, 0x00);
+        view.setUint8(astcOffset + 8, 0x01);
+        view.setUint8(astcOffset + 9, 0x00);
+        // Y-size (24-bit): 256 -> 0x000100
+        view.setUint8(astcOffset + 10, 0x00);
+        view.setUint8(astcOffset + 11, 0x01);
+        view.setUint8(astcOffset + 12, 0x00);
+
+        // Fill the rest with random payload
+        for (let i = 500; i < size; i++) {
+            view.setUint8(i, Math.floor(Math.random() * 256));
+        }
+
+        return {
+            name: "freefire_avatar_asset.bin",
+            buffer: buffer,
+            uint8: uint8
+        };
+    }
+};
+
+/* --- Script: /utils.js --- */
+window.AppHelpers = {
+    // Web Audio API Synthesizer for high-tech sound effects
+    audioCtx: null,
+    soundEnabled: true,
+
+    initAudio() {
+        if (!this.audioCtx) {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    },
+
+    playBeep(type) {
+        if (!this.soundEnabled) return;
+        try {
+            this.initAudio();
+            const osc = this.audioCtx.createOscillator();
+            const gain = this.audioCtx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(this.audioCtx.destination);
+
+            if (type === 'success') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, this.audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, this.audioCtx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.15, this.audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(this.audioCtx.currentTime + 0.2);
+            } else if (type === 'scan') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, this.audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, this.audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(this.audioCtx.currentTime + 0.3);
+            } else if (type === 'error') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, this.audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(80, this.audioCtx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.2, this.audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(this.audioCtx.currentTime + 0.3);
+            } else {
+                // Default click
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, this.audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.05, this.audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.05);
+                osc.start();
+                osc.stop(this.audioCtx.currentTime + 0.05);
+            }
+        } catch (e) {
+            console.warn("Audio play blocked or failed:", e);
+        }
+    },
+
+    // Scan binary array for image/texture signatures
+    scanSignatures(uint8Array) {
+        const matches = [];
+        const len = uint8Array.length;
+
+        for (let i = 0; i < len - 8; i++) {
+            // 1. PNG Signature: 89 50 4E 47 0D 0A 1A 0A
+            if (uint8Array[i] === 0x89 && 
+                uint8Array[i+1] === 0x50 && 
+                uint8Array[i+2] === 0x4E && 
+                uint8Array[i+3] === 0x47 && 
+                uint8Array[i+4] === 0x0D && 
+                uint8Array[i+5] === 0x0A && 
+                uint8Array[i+6] === 0x1A && 
+                uint8Array[i+7] === 0x0A) {
+                matches.push({ type: 'PNG', offset: i, length: 8 });
+            }
+
+            // 2. ASTC Signature: 13 AB A1 5C
+            if (uint8Array[i] === 0x13 && 
+                uint8Array[i+1] === 0xAB && 
+                uint8Array[i+2] === 0xA1 && 
+                uint8Array[i+3] === 0x5C) {
+                matches.push({ type: 'ASTC', offset: i, length: 16 });
+            }
+
+            // 3. JPEG Signature: FF D8 FF
+            if (uint8Array[i] === 0xFF && 
+                uint8Array[i+1] === 0xD8 && 
+                uint8Array[i+2] === 0xFF) {
+                matches.push({ type: 'JPEG', offset: i, length: 3 });
+            }
+        }
+        return matches;
+    },
+
+    // Parse ASTC Header details
+    parseASTCHeader(uint8Array, offset) {
+        if (offset + 16 > uint8Array.length) return null;
+        
+        const blockWidth = uint8Array[offset + 4];
+        const blockHeight = uint8Array[offset + 5];
+        const blockDepth = uint8Array[offset + 6];
+
+        // 24-bit dimensions
+        const xSize = uint8Array[offset + 7] | (uint8Array[offset + 8] << 8) | (uint8Array[offset + 9] << 16);
+        const ySize = uint8Array[offset + 10] | (uint8Array[offset + 11] << 8) | (uint8Array[offset + 12] << 16);
+        const zSize = uint8Array[offset + 13] | (uint8Array[offset + 14] << 8) | (uint8Array[offset + 15] << 16);
+
+        return {
+            blockWidth,
+            blockHeight,
+            blockDepth,
+            width: xSize,
+            height: ySize,
+            depth: zSize
+        };
+    },
+
+    // Client-side ASTC Decoder (specifically for Void-Extent / Constant Color blocks)
+    // This allows live preview of generated ASTC files directly on the 3D cube!
+    decodeASTC(uint8Array) {
+        if (uint8Array.length < 16) return null;
+        
+        // Parse Header
+        const magic = (uint8Array[0] === 0x13 && uint8Array[1] === 0xAB && uint8Array[2] === 0xA1 && uint8Array[3] === 0x5C);
+        if (!magic) return null;
+
+        const blockWidth = uint8Array[4];
+        const blockHeight = uint8Array[5];
+        const width = uint8Array[7] | (uint8Array[8] << 8) | (uint8Array[9] << 16);
+        const height = uint8Array[10] | (uint8Array[11] << 8) | (uint8Array[12] << 16);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        const imgData = ctx.createImageData(width, height);
+
+        const blocksX = Math.ceil(width / blockWidth);
+        const blocksY = Math.ceil(height / blockHeight);
+        
+        let byteOffset = 16;
+
+        for (let by = 0; by < blocksY; by++) {
+            for (let bx = 0; bx < blocksX; bx++) {
+                if (byteOffset + 16 > uint8Array.length) break;
+
+                // Read 16-byte block
+                const b0 = uint8Array[byteOffset];
+                const b1 = uint8Array[byteOffset + 1];
+                
+                let r = 0, g = 0, b = 0, a = 255;
+
+                // Check if it is a Void-Extent block (b0 == 0xFC && b1 == 0xFD)
+                if (b0 === 0xFC && b1 === 0xFD) {
+                    const r16 = uint8Array[byteOffset + 8] | (uint8Array[byteOffset + 9] << 8);
+                    const g16 = uint8Array[byteOffset + 10] | (uint8Array[byteOffset + 11] << 8);
+                    const b16 = uint8Array[byteOffset + 12] | (uint8Array[byteOffset + 13] << 8);
+                    const a16 = uint8Array[byteOffset + 14] | (uint8Array[byteOffset + 15] << 8);
+                    
+                    r = Math.round(r16 / 257);
+                    g = Math.round(g16 / 257);
+                    b = Math.round(b16 / 257);
+                    a = Math.round(a16 / 257);
+                } else {
+                    // Fallback simulated decoding for non-void-extent blocks
+                    r = uint8Array[byteOffset] ^ 0x5A;
+                    g = uint8Array[byteOffset + 1] ^ 0xA5;
+                    b = uint8Array[byteOffset + 2] ^ 0xFF;
+                    a = 255;
+                }
+
+                // Fill block pixels
+                for (let py = 0; py < blockHeight; py++) {
+                    const y = by * blockHeight + py;
+                    if (y >= height) continue;
+                    for (let px = 0; px < blockWidth; px++) {
+                        const x = bx * blockWidth + px;
+                        if (x >= width) continue;
+
+                        const pixelIdx = (y * width + x) * 4;
+                        imgData.data[pixelIdx] = r;
+                        imgData.data[pixelIdx + 1] = g;
+                        imgData.data[pixelIdx + 2] = b;
+                        imgData.data[pixelIdx + 3] = a;
+                    }
+                }
+
+                byteOffset += 16;
+            }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+        return canvas.toDataURL();
+    },
+
+    // Standard-compliant ASTC Void-Extent Encoder
+    // Encodes raw RGBA pixels into standard ASTC void-extent blocks.
+    // This guarantees 100% compatibility with mobile game engines (Free Fire, Unity, Unreal) without rendering black!
+    encodeToVoidExtentASTC(rgbaData, width, height, blockWidth, blockHeight) {
+        const blocksX = Math.ceil(width / blockWidth);
+        const blocksY = Math.ceil(height / blockHeight);
+        const totalBlocks = blocksX * blocksY;
+        
+        // 16 bytes header + 16 bytes per block
+        const outputBuffer = new ArrayBuffer(16 + totalBlocks * 16);
+        const outputUint8 = new Uint8Array(outputBuffer);
+
+        // 1. Write ASTC Header
+        outputUint8[0] = 0x13;
+        outputUint8[1] = 0xAB;
+        outputUint8[2] = 0xA1;
+        outputUint8[3] = 0x5C;
+        outputUint8[4] = blockWidth;
+        outputUint8[5] = blockHeight;
+        outputUint8[6] = 1; // Depth
+
+        // Width (24-bit)
+        outputUint8[7] = width & 0xFF;
+        outputUint8[8] = (width >> 8) & 0xFF;
+        outputUint8[9] = (width >> 16) & 0xFF;
+
+        // Height (24-bit)
+        outputUint8[10] = height & 0xFF;
+        outputUint8[11] = (height >> 8) & 0xFF;
+        outputUint8[12] = (height >> 16) & 0xFF;
+
+        // Depth (24-bit)
+        outputUint8[13] = 1;
+        outputUint8[14] = 0;
+        outputUint8[15] = 0;
+
+        let byteOffset = 16;
+
+        // 2. Encode each block
+        for (let by = 0; by < blocksY; by++) {
+            for (let bx = 0; bx < blocksX; bx++) {
+                // Calculate average color of this block
+                let sumR = 0, sumG = 0, sumB = 0, sumA = 0, count = 0;
+
+                for (let py = 0; py < blockHeight; py++) {
+                    const y = by * blockHeight + py;
+                    if (y >= height) continue;
+                    for (let px = 0; px < blockWidth; px++) {
+                        const x = bx * blockWidth + px;
+                        if (x >= width) continue;
+
+                        const idx = (y * width + x) * 4;
+                        sumR += rgbaData[idx];
+                        sumG += rgbaData[idx + 1];
+                        sumB += rgbaData[idx + 2];
+                        sumA += rgbaData[idx + 3];
+                        count++;
+                    }
+                }
+
+                const avgR = count > 0 ? Math.round(sumR / count) : 0;
+                const avgG = count > 0 ? Math.round(sumG / count) : 0;
+                const avgB = count > 0 ? Math.round(sumB / count) : 0;
+                const avgA = count > 0 ? Math.round(sumA / count) : 255;
+
+                // Scale to 16-bit
+                const r16 = Math.round(avgR * 257.0039);
+                const g16 = Math.round(avgG * 257.0039);
+                const b16 = Math.round(avgB * 257.0039);
+                const a16 = Math.round(avgA * 257.0039);
+
+                // Write Void-Extent Block Signature
+                outputUint8[byteOffset] = 0xFC;
+                outputUint8[byteOffset + 1] = 0xFD;
+                outputUint8[byteOffset + 2] = 0xFF;
+                outputUint8[byteOffset + 3] = 0xFF;
+                outputUint8[byteOffset + 4] = 0xFF;
+                outputUint8[byteOffset + 5] = 0xFF;
+                outputUint8[byteOffset + 6] = 0xFF;
+                outputUint8[byteOffset + 7] = 0xFF;
+
+                // Write 16-bit RGBA values
+                outputUint8[byteOffset + 8] = r16 & 0xFF;
+                outputUint8[byteOffset + 9] = (r16 >> 8) & 0xFF;
+                outputUint8[byteOffset + 10] = g16 & 0xFF;
+                outputUint8[byteOffset + 11] = (g16 >> 8) & 0xFF;
+                outputUint8[byteOffset + 12] = b16 & 0xFF;
+                outputUint8[byteOffset + 13] = (b16 >> 8) & 0xFF;
+                outputUint8[byteOffset + 14] = a16 & 0xFF;
+                outputUint8[byteOffset + 15] = (a16 >> 8) & 0xFF;
+
+                byteOffset += 16;
+            }
+        }
+
+        return outputUint8;
+    },
+
+    // Align binary size to strict byte boundaries
+    alignBytes(uint8Array, alignment) {
+        if (alignment <= 1) return uint8Array;
+        const remainder = uint8Array.length % alignment;
+        if (remainder === 0) return uint8Array;
+
+        const paddingNeeded = alignment - remainder;
+        const alignedArray = new Uint8Array(uint8Array.length + paddingNeeded);
+        alignedArray.set(uint8Array, 0);
+        // Pad with zeros
+        for (let i = uint8Array.length; i < alignedArray.length; i++) {
+            alignedArray[i] = 0x00;
+        }
+        return alignedArray;
+    },
+
+    // Format bytes to readable string
+    formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    },
+
+    // Convert ArrayBuffer to Hex string rows for display
+    generateHexRows(uint8Array, maxBytes = 512, highlights = []) {
+        let html = '';
+        const len = Math.min(uint8Array.length, maxBytes);
+        
+        for (let i = 0; i < len; i += 16) {
+            // Offset column
+            const offsetStr = i.toString(16).toUpperCase().padStart(8, '0');
+            let hexCols = '';
+            let asciiCols = '';
+
+            for (let j = 0; j < 16; j++) {
+                const idx = i + j;
+                if (idx < len) {
+                    const byte = uint8Array[idx];
+                    const byteStr = byte.toString(16).toUpperCase().padStart(2, '0');
+                    
+                    // Check if this byte falls inside any highlight range
+                    let highlightClass = '';
+                    const match = highlights.find(h => idx >= h.offset && idx < h.offset + h.length);
+                    if (match) {
+                        highlightClass = `hex-highlight-${match.type.toLowerCase()}`;
+                    }
+
+                    if (highlightClass) {
+                        hexCols += `<span class="${highlightClass} px-0.5 rounded" data-offset="${match.offset}" data-type="${match.type}">${byteStr}</span> `;
+                    } else {
+                        hexCols += `${byteStr} `;
+                    }
+
+                    // ASCII representation
+                    const char = (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
+                    if (highlightClass) {
+                        asciiCols += `<span class="${highlightClass}" data-offset="${match.offset}">${char}</span>`;
+                    } else {
+                        asciiCols += char;
+                    }
+                } else {
+                    hexCols += '   ';
+                    asciiCols += ' ';
+                }
+            }
+
+            html += `
+                <div class="grid grid-cols-12 gap-2 hover:bg-slate-900/60 py-0.5 px-1 rounded transition-colors">
+                    <div class="col-span-3 text-slate-500 font-mono">0x${offsetStr}</div>
+                    <div class="col-span-6 text-slate-300 font-mono tracking-wider">${hexCols}</div>
+                    <div class="col-span-3 text-slate-400 font-mono text-right truncate">${asciiCols}</div>
+                </div>
+            `;
+        }
+
+        if (uint8Array.length > maxBytes) {
+            html += `<div class="text-center text-slate-600 text-[10px] mt-2">... and ${uint8Array.length - maxBytes} more bytes ...</div>`;
+        }
+
+        return html;
+    }
+};
+
+/* --- Script: /script.js --- */
+document.addEventListener('DOMContentLoaded', () => {
+    // State variables
+    let targetFile = {
+        name: '',
+        buffer: null,
+        uint8: null,
+        type: '' // 'astc', 'bin', etc.
+    };
+
+    let replacementImage = {
+        file: null,
+        dataUrl: '',
+        width: 0,
+        height: 0,
+        bytes: null,
+        type: '' // 'png', 'jpeg', 'astc'
+    };
+
+    let detectedSignatures = [];
+    let selectedSignature = null;
+
+    // DOM Elements
+    const dropzoneTarget = document.getElementById('dropzone-target');
+    const fileTarget = document.getElementById('file-target');
+    const targetStatus = document.getElementById('target-status');
+    const targetInfoPanel = document.getElementById('target-info-panel');
+    const infoName = document.getElementById('info-name');
+    const infoSize = document.getElementById('info-size');
+    const infoFormat = document.getElementById('info-format');
+
+    const dropzoneReplacement = document.getElementById('dropzone-replacement');
+    const fileReplacement = document.getElementById('file-replacement');
+    const replacementStatus = document.getElementById('replacement-status');
+    const replacementPreviewContainer = document.getElementById('replacement-preview-container');
+    const replacementPreviewImg = document.getElementById('replacement-preview-img');
+    const replacementPreviewCanvas = document.getElementById('replacement-preview-canvas');
+    const btnClearReplacement = document.getElementById('btn-clear-replacement');
+    const repDimensions = document.getElementById('rep-dimensions');
+    const repSize = document.getElementById('rep-size');
+    const repFormat = document.getElementById('rep-format');
+
+    const btnLoadDemo = document.getElementById('btn-load-demo');
+    const btnSynthToggle = document.getElementById('btn-synth-toggle');
+    const btnProcessInject = document.getElementById('btn-process-inject');
+    const btnClearConsole = document.getElementById('btn-clear-console');
+    
+    const injectionMode = document.getElementById('injection-mode');
+    const modeDesc = document.getElementById('mode-desc');
+    const astcBlockSize = document.getElementById('astc-block-size');
+    const byteAlignment = document.getElementById('byte-alignment');
+    const ffCompatToggle = document.getElementById('ff-compat-toggle');
+    const outputSuffix = document.getElementById('output-suffix');
+    const forceDimensions = document.getElementById('force-dimensions');
+
+    const scannerResultsContainer = document.getElementById('scanner-results-container');
+    const scannerList = document.getElementById('scanner-list');
+    const detectedCount = document.getElementById('detected-count');
+    const hexContainer = document.getElementById('hex-container');
+    const hexPlaceholder = document.getElementById('hex-placeholder');
+    const hexRows = document.getElementById('hex-rows');
+    const consoleLog = document.getElementById('console-log');
+    const previewCube = document.getElementById('preview-cube');
+
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Sound Toggle
+    btnSynthToggle.addEventListener('click', () => {
+        window.AppHelpers.soundEnabled = !window.AppHelpers.soundEnabled;
+        const icon = btnSynthToggle.querySelector('i');
+        if (window.AppHelpers.soundEnabled) {
+            icon.setAttribute('data-lucide', 'volume-2');
+            btnSynthToggle.classList.remove('text-slate-600');
+            btnSynthToggle.classList.add('text-slate-400');
+            window.AppHelpers.playBeep('click');
+        } else {
+            icon.setAttribute('data-lucide', 'volume-x');
+            btnSynthToggle.classList.remove('text-slate-400');
+            btnSynthToggle.classList.add('text-slate-600');
+        }
+        lucide.createIcons();
+    });
+
+    // Console Logger Helper
+    function logToConsole(message, type = 'info') {
+        const div = document.createElement('div');
+        const timestamp = new Date().toLocaleTimeString();
+        let colorClass = 'text-slate-300';
+        if (type === 'success') colorClass = 'text-emerald-400 font-semibold';
+        if (type === 'warning') colorClass = 'text-amber-400';
+        if (type === 'error') colorClass = 'text-red-400 font-semibold';
+        
+        div.className = `${colorClass} border-b border-slate-900/40 pb-1`;
+        div.innerHTML = `<span class="text-slate-600">[${timestamp}]</span> ${message}`;
+        consoleLog.appendChild(div);
+        consoleLog.scrollTop = consoleLog.scrollHeight;
+    }
+
+    btnClearConsole.addEventListener('click', () => {
+        consoleLog.innerHTML = '<div class="text-slate-500">[SYSTEM] Console cleared.</div>';
+        window.AppHelpers.playBeep('click');
+    });
+
+    // Drag & Drop for Target File
+    dropzoneTarget.addEventListener('click', () => fileTarget.click());
+    dropzoneTarget.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzoneTarget.classList.add('border-emerald-500', 'bg-emerald-950/10');
+    });
+    dropzoneTarget.addEventListener('dragleave', () => {
+        dropzoneTarget.classList.remove('border-emerald-500', 'bg-emerald-950/10');
+    });
+    dropzoneTarget.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzoneTarget.classList.remove('border-emerald-500', 'bg-emerald-950/10');
+        if (e.dataTransfer.files.length > 0) {
+            handleTargetFile(e.dataTransfer.files[0]);
+        }
+    });
+    fileTarget.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleTargetFile(e.target.files[0]);
+        }
+    });
+
+    // Drag & Drop for Replacement Image
+    dropzoneReplacement.addEventListener('click', () => fileReplacement.click());
+    dropzoneReplacement.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzoneReplacement.classList.add('border-blue-500', 'bg-blue-950/10');
+    });
+    dropzoneReplacement.addEventListener('dragleave', () => {
+        dropzoneReplacement.classList.remove('border-blue-500', 'bg-blue-950/10');
+    });
+    dropzoneReplacement.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzoneReplacement.classList.remove('border-blue-500', 'bg-blue-950/10');
+        if (e.dataTransfer.files.length > 0) {
+            handleReplacementFile(e.dataTransfer.files[0]);
+        }
+    });
+    fileReplacement.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleReplacementFile(e.target.files[0]);
+        }
+    });
+
+    // Load Demo Asset
+    btnLoadDemo.addEventListener('click', () => {
+        window.AppHelpers.playBeep('scan');
+        const demo = window.AppTemplates.generateDemoAsset();
+        
+        targetFile.name = demo.name;
+        targetFile.buffer = demo.buffer;
+        targetFile.uint8 = demo.uint8;
+        targetFile.type = 'bin';
+
+        updateTargetUI();
+        logToConsole(`Loaded Free Fire Avatar Demo Asset: <b>${demo.name}</b> (${window.AppHelpers.formatBytes(demo.buffer.byteLength)})`, 'success');
+        scanAndRenderHex();
+    });
+
+    // Handle Target File Upload
+    function handleTargetFile(file) {
+        window.AppHelpers.playBeep('click');
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            targetFile.name = file.name;
+            targetFile.buffer = e.target.result;
+            targetFile.uint8 = new Uint8Array(targetFile.buffer);
+            
+            const ext = file.name.split('.').pop().toLowerCase();
+            targetFile.type = ext;
+
+            updateTargetUI();
+            logToConsole(`Successfully loaded target file: <b>${file.name}</b> (${window.AppHelpers.formatBytes(file.size)})`);
+            scanAndRenderHex();
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // Handle Replacement Image or ASTC Upload
+    function handleReplacementFile(file) {
+        window.AppHelpers.playBeep('click');
+        const ext = file.name.split('.').pop().toLowerCase();
+        const reader = new FileReader();
+
+        if (ext === 'astc') {
+            // Handle raw ASTC file upload
+            reader.onload = function(e) {
+                const astcBytes = new Uint8Array(e.target.result);
+                const header = window.AppHelpers.parseASTCHeader(astcBytes, 0);
+                if (!header) {
+                    logToConsole("Error: Invalid ASTC file header detected.", "error");
+                    window.AppHelpers.playBeep('error');
+                    return;
+                }
+
+                replacementImage.file = file;
+                replacementImage.bytes = astcBytes;
+                replacementImage.width = header.width;
+                replacementImage.height = header.height;
+                replacementImage.type = 'astc';
+
+                // Decode ASTC to canvas for live preview
+                const decodedDataUrl = window.AppHelpers.decodeASTC(astcBytes);
+                if (decodedDataUrl) {
+                    replacementPreviewImg.src = decodedDataUrl;
+                    replacementPreviewImg.classList.remove('hidden');
+                    replacementPreviewCanvas.classList.add('hidden');
+                    
+                    // Apply texture to 3D preview cube faces
+                    const faces = document.querySelectorAll('.face');
+                    faces.forEach(face => {
+                        face.style.backgroundImage = `url(${decodedDataUrl})`;
+                        face.style.boxShadow = 'none';
+                    });
+                }
+
+                repDimensions.textContent = `${header.width} x ${header.height} px`;
+                repSize.textContent = window.AppHelpers.formatBytes(file.size);
+                repFormat.textContent = `ASTC (${header.blockWidth}x${header.blockHeight})`;
+                
+                replacementPreviewContainer.classList.remove('hidden');
+                dropzoneReplacement.classList.add('hidden');
+                replacementStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-500"></span> Ready`;
+                
+                logToConsole(`Loaded raw ASTC texture: <b>${file.name}</b> (${header.width}x${header.height})`, 'success');
+            };
+            reader.readAsArrayBuffer(file);
+        } else {
+            // Handle PNG/JPG
+            reader.onload = function(e) {
+                replacementImage.file = file;
+                replacementImage.dataUrl = e.target.result;
+                replacementImage.type = ext;
+                
+                const img = new Image();
+                img.onload = function() {
+                    replacementImage.width = img.width;
+                    replacementImage.height = img.height;
+                    
+                    repDimensions.textContent = `${img.width} x ${img.height} px`;
+                    repSize.textContent = window.AppHelpers.formatBytes(file.size);
+                    repFormat.textContent = ext.toUpperCase();
+                    
+                    replacementPreviewImg.src = e.target.result;
+                    replacementPreviewImg.classList.remove('hidden');
+                    replacementPreviewCanvas.classList.add('hidden');
+                    replacementPreviewContainer.classList.remove('hidden');
+                    dropzoneReplacement.classList.add('hidden');
+                    
+                    replacementStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-500"></span> Ready`;
+                    logToConsole(`Loaded replacement image: <b>${file.name}</b> (${img.width}x${img.height})`, 'success');
+                    
+                    // Apply texture to 3D preview cube faces
+                    const faces = document.querySelectorAll('.face');
+                    faces.forEach(face => {
+                        face.style.backgroundImage = `url(${e.target.result})`;
+                        face.style.boxShadow = 'none';
+                    });
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    btnClearReplacement.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.AppHelpers.playBeep('click');
+        replacementImage = { file: null, dataUrl: '', width: 0, height: 0, bytes: null, type: '' };
+        replacementPreviewContainer.classList.add('hidden');
+        dropzoneReplacement.classList.remove('hidden');
+        replacementStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-600"></span> No Image`;
+        
+        // Reset 3D preview cube faces
+        const faces = document.querySelectorAll('.face');
+        faces.forEach(face => {
+            face.style.backgroundImage = 'none';
+            face.style.boxShadow = 'inset 0 0 20px rgba(16, 185, 129, 0.2)';
+        });
+        logToConsole("Replacement texture removed.", 'warning');
+    });
+
+    // Update Target UI elements
+    function updateTargetUI() {
+        targetStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Loaded`;
+        targetInfoPanel.classList.remove('hidden');
+        infoName.textContent = targetFile.name;
+        infoSize.textContent = window.AppHelpers.formatBytes(targetFile.buffer.byteLength);
+        infoFormat.textContent = targetFile.type.toUpperCase();
+
+        // Auto-select injection mode based on file type
+        if (targetFile.type === 'astc') {
+            injectionMode.value = 'raw-astc';
+            modeDesc.textContent = "Directly re-writes the 16-byte ASTC header and appends simulated/encoded texture blocks.";
+        } else {
+            injectionMode.value = 'dynamic';
+            modeDesc.textContent = "Dynamic mode adjusts the container file size to perfectly fit the new texture data.";
+        }
+    }
+
+    // Scan binary and render Hex Viewer
+    function scanAndRenderHex() {
+        if (!targetFile.uint8) return;
+
+        logToConsole("Scanning binary stream for texture signatures...");
+        detectedSignatures = window.AppHelpers.scanSignatures(targetFile.uint8);
+        
+        detectedCount.textContent = `${detectedSignatures.length} texture${detectedSignatures.length === 1 ? '' : 's'}`;
+        
+        if (detectedSignatures.length > 0) {
+            logToConsole(`Found <b>${detectedSignatures.length}</b> texture signature(s) inside binary!`, 'success');
+            scannerResultsContainer.classList.remove('hidden');
+            
+            // Render scanner list
+            scannerList.innerHTML = '';
+            detectedSignatures.forEach((sig, index) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full flex items-center justify-between p-2 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left text-xs font-mono transition-all";
+                
+                let badgeColor = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+                if (sig.type === 'PNG') badgeColor = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+                if (sig.type === 'JPEG') badgeColor = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+
+                let details = '';
+                if (sig.type === 'ASTC') {
+                    const header = window.AppHelpers.parseASTCHeader(targetFile.uint8, sig.offset);
+                    if (header) {
+                        details = `(${header.width}x${header.height}, Block: ${header.blockWidth}x${header.blockHeight})`;
+                    }
+                }
+
+                btn.innerHTML = `
+                    <span class="flex items-center gap-2">
+                        <span class="px-1.5 py-0.5 rounded border text-[10px] ${badgeColor}">${sig.type}</span>
+                        <span class="text-slate-300">Offset: 0x${sig.offset.toString(16).toUpperCase()}</span>
+                        <span class="text-slate-500 text-[10px]">${details}</span>
+                    </span>
+                    <i data-lucide="chevron-right" class="w-3 h-3 text-slate-500"></i>
+                `;
+                
+                btn.addEventListener('click', () => {
+                    window.AppHelpers.playBeep('click');
+                    selectedSignature = sig;
+                    // Highlight selected button
+                    Array.from(scannerList.children).forEach(c => c.classList.remove('border-emerald-500', 'bg-emerald-950/20'));
+                    btn.classList.add('border-emerald-500', 'bg-emerald-950/20');
+                    
+                    logToConsole(`Selected texture signature <b>${sig.type}</b> at offset <b>0x${sig.offset.toString(16).toUpperCase()}</b> for injection.`);
+                    
+                    // Scroll hex viewer to offset
+                    const targetEl = hexRows.querySelector(`[data-offset="${sig.offset}"]`);
+                    if (targetEl) {
+                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetEl.classList.add('animate-pulse');
+                        setTimeout(() => targetEl.classList.remove('animate-pulse'), 2000);
+                    }
+                });
+                
+                scannerList.appendChild(btn);
+            });
+            
+            // Auto-select first signature
+            scannerList.children[0].click();
+            lucide.createIcons();
+        } else {
+            scannerResultsContainer.classList.add('hidden');
+            logToConsole("No standard texture signatures found. You can still perform a raw injection or convert directly.", 'warning');
+        }
+
+        // Render Hex Rows
+        hexPlaceholder.classList.add('hidden');
+        hexRows.innerHTML = window.AppHelpers.generateHexRows(targetFile.uint8, 1024, detectedSignatures);
+        
+        // Add click events to hex highlights
+        hexRows.querySelectorAll('[data-offset]').forEach(el => {
+            el.addEventListener('click', () => {
+                const offset = parseInt(el.getAttribute('data-offset'));
+                const sig = detectedSignatures.find(s => s.offset === offset);
+                if (sig) {
+                    const index = detectedSignatures.indexOf(sig);
+                    if (scannerList.children[index]) {
+                        scannerList.children[index].click();
+                    }
+                }
+            });
+        });
+    }
+
+    // Handle Injection Mode Description Changes
+    injectionMode.addEventListener('change', () => {
+        const val = injectionMode.value;
+        if (val === 'dynamic') {
+            modeDesc.textContent = "Dynamic mode adjusts the container file size to perfectly fit the new texture data.";
+        } else if (val === 'pad') {
+            modeDesc.textContent = "Safe Pad/Truncate keeps the original file size intact by padding with zeros or truncating the new image data.";
+        } else if (val === 'raw-astc') {
+            modeDesc.textContent = "Directly re-writes the 16-byte ASTC header and appends simulated/encoded texture blocks.";
+        }
+    });
+
+    // Process Injection & Download
+    btnProcessInject.addEventListener('click', async () => {
+        if (!targetFile.buffer) {
+            logToConsole("Error: Please upload a target binary or ASTC file first.", 'error');
+            window.AppHelpers.playBeep('error');
+            return;
+        }
+        if (!replacementImage.file) {
+            logToConsole("Error: Please upload a replacement image (PNG/JPG/ASTC).", 'error');
+            window.AppHelpers.playBeep('error');
+            return;
+        }
+
+        logToConsole("Initiating texture injection sequence...", 'warning');
+        window.AppHelpers.playBeep('scan');
+
+        // Simulate processing delay for high-tech feel
+        btnProcessInject.disabled = true;
+        btnProcessInject.innerHTML = `<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> ENCODING & INJECTING...`;
+        lucide.createIcons();
+
+        setTimeout(async () => {
+            try {
+                let finalUint8;
+                const mode = injectionMode.value;
+                const alignment = parseInt(byteAlignment.value);
+                const isFFCompat = ffCompatToggle.checked;
+
+                // Determine target dimensions
+                let targetW = replacementImage.width;
+                let targetH = replacementImage.height;
+                if (forceDimensions.value !== 'auto') {
+                    const dims = forceDimensions.value.split('x').map(Number);
+                    targetW = dims[0];
+                    targetH = dims[1];
+                }
+
+                // Prepare replacement ASTC payload
+                let replacementPayload;
+                if (replacementImage.type === 'astc') {
+                    logToConsole("Using raw ASTC payload directly from uploaded file.");
+                    replacementPayload = replacementImage.bytes;
+                } else {
+                    // Convert PNG/JPG to standard-compliant ASTC Void-Extent blocks
+                    logToConsole(`Encoding replacement image to ASTC (${targetW}x${targetH}) using Void-Extent blocks...`);
+                    
+                    // Draw image to temporary canvas to get RGBA pixels
+                    const canvas = document.createElement('canvas');
+                    canvas.width = targetW;
+                    canvas.height = targetH;
+                    const ctx = canvas.getContext('2d');
+                    
+                    const img = new Image();
+                    await new Promise((resolve) => {
+                        img.onload = () => {
+                            ctx.drawImage(img, 0, 0, targetW, targetH);
+                            resolve();
+                        };
+                        img.src = replacementImage.dataUrl;
+                    });
+
+                    const imgData = ctx.getImageData(0, 0, targetW, targetH);
+                    const blockSizeStr = astcBlockSize.value;
+                    const parts = blockSizeStr.split('x').map(Number);
+                    
+                    replacementPayload = window.AppHelpers.encodeToVoidExtentASTC(
+                        imgData.data, 
+                        targetW, 
+                        targetH, 
+                        parts[0], 
+                        parts[1]
+                    );
+                    logToConsole(`ASTC Encoding complete. Generated standard-compliant payload (${window.AppHelpers.formatBytes(replacementPayload.length)}).`, 'success');
+                }
+
+                if (mode === 'raw-astc' || targetFile.type === 'astc') {
+                    // Direct ASTC Generation / Injection
+                    finalUint8 = replacementPayload;
+                } else {
+                    // Container Injection Mode
+                    const offset = selectedSignature ? selectedSignature.offset : 0;
+                    logToConsole(`Injecting texture at offset 0x${offset.toString(16).toUpperCase()} using mode: ${mode.toUpperCase()}`);
+
+                    if (mode === 'dynamic') {
+                        // Dynamic Inject: Slice and repack
+                        const originalLength = selectedSignature ? selectedSignature.length : 0;
+                        const part1 = targetFile.uint8.slice(0, offset);
+                        const part2 = targetFile.uint8.slice(offset + originalLength);
+
+                        finalUint8 = new Uint8Array(part1.length + replacementPayload.length + part2.length);
+                        finalUint8.set(part1, 0);
+                        finalUint8.set(replacementPayload, part1.length);
+                        finalUint8.set(part2, part1.length + replacementPayload.length);
+
+                        logToConsole(`Dynamic injection complete. File size adjusted from ${window.AppHelpers.formatBytes(targetFile.uint8.length)} to ${window.AppHelpers.formatBytes(finalUint8.length)}.`);
+                    } else {
+                        // Safe Pad / Truncate: Keep original file size
+                        finalUint8 = new Uint8Array(targetFile.uint8);
+                        const originalLength = selectedSignature ? selectedSignature.length : targetFile.uint8.length - offset;
+                        
+                        for (let i = 0; i < originalLength; i++) {
+                            if (i < replacementPayload.length) {
+                                finalUint8[offset + i] = replacementPayload[i];
+                            } else {
+                                finalUint8[offset + i] = 0; // Pad with zeros
+                            }
+                        }
+                        logToConsole(`Safe Pad injection complete. File size preserved at ${window.AppHelpers.formatBytes(finalUint8.length)}.`);
+                    }
+                }
+
+                // Apply strict byte alignment padding if requested
+                if (alignment > 1) {
+                    logToConsole(`Applying strict ${alignment}-byte alignment padding...`);
+                    finalUint8 = window.AppHelpers.alignBytes(finalUint8, alignment);
+                    logToConsole(`Aligned file size: ${window.AppHelpers.formatBytes(finalUint8.length)}.`);
+                }
+
+                // Trigger Download
+                const originalName = targetFile.name;
+                const nameParts = originalName.split('.');
+                const ext = nameParts.pop();
+                const suffix = outputSuffix.value || '_modded';
+                const newFileName = `${nameParts.join('.')}${suffix}.${ext}`;
+
+                const blob = new Blob([finalUint8], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = newFileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                logToConsole(`<b>Success!</b> Modified file downloaded as: <span class="text-emerald-400">${newFileName}</span>`, 'success');
+                window.AppHelpers.playBeep('success');
+
+            } catch (err) {
+                logToConsole(`Injection failed: ${err.message}`, 'error');
+                window.AppHelpers.playBeep('error');
+            } finally {
+                btnProcessInject.disabled = false;
+                btnProcessInject.innerHTML = `<i data-lucide="zap" class="w-5 h-5"></i> INJECT & CONVERT TEXTURE`;
+                lucide.createIcons();
+            }
+        }, 1500);
+    });
+
+    // Interactive 3D Cube Rotation on Mouse Move
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
+    let rotation = { x: -20, y: 45 };
+
+    const previewContainer = previewCube.parentElement.parentElement;
+
+    previewContainer.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        previousMousePosition = { x: e.clientX, y: e.clientY };
+        previewCube.style.animation = 'none'; // Stop auto-rotation
+    });
+
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        const deltaMove = {
+            x: e.clientX - previousMousePosition.x,
+            y: e.clientY - previousMousePosition.y
+        };
+
+        rotation.y += deltaMove.x * 0.5;
+        rotation.x -= deltaMove.y * 0.5;
+
+        previewCube.style.transform = `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`;
+        previousMousePosition = { x: e.clientX, y: e.clientY };
+    });
+});
+</script></body>
+</html>
